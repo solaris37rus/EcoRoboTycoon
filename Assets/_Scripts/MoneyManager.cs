@@ -1,6 +1,6 @@
 using UnityEngine;
 using TMPro;
-using DG.Tweening; // <--- ЭТОЙ СТРОКИ НЕ ХВАТАЛО
+using DG.Tweening;
 
 public class MoneyManager : MonoBehaviour
 {
@@ -10,6 +10,10 @@ public class MoneyManager : MonoBehaviour
     public TextMeshProUGUI moneyText;
 
     private int _currentMoney = 0;
+    public int CurrentMoney => _currentMoney;
+
+    // Ключ, по которому будем искать деньги в памяти
+    private const string SAVE_KEY_MONEY = "Save_Money";
 
     void Awake()
     {
@@ -19,22 +23,57 @@ public class MoneyManager : MonoBehaviour
 
     void Start()
     {
+        LoadProgress(); // <--- ЗАГРУЖАЕМСЯ ПРИ СТАРТЕ
         UpdateUI();
     }
 
     public void AddMoney(int amount)
     {
         _currentMoney += amount;
-        UpdateUI();
+        SaveProgress(); // <--- СОХРАНЯЕМСЯ
 
-        // Теперь ошибка пропадет
+        UpdateUI();
         if (moneyText != null)
             moneyText.transform.DOPunchScale(Vector3.one * 0.2f, 0.2f, 10, 1);
+    }
+
+    public void SpendMoney(int amount)
+    {
+        _currentMoney -= amount;
+        if (_currentMoney < 0) _currentMoney = 0;
+
+        SaveProgress(); // <--- СОХРАНЯЕМСЯ
+        UpdateUI();
     }
 
     void UpdateUI()
     {
         if (moneyText != null)
             moneyText.text = _currentMoney.ToString() + "$";
+    }
+
+    // --- ЛОГИКА СОХРАНЕНИЯ ---
+
+    void SaveProgress()
+    {
+        PlayerPrefs.SetInt(SAVE_KEY_MONEY, _currentMoney);
+        PlayerPrefs.Save(); // Принудительно записываем на диск
+    }
+
+    void LoadProgress()
+    {
+        // Если сохранение есть - берем его, иначе 0
+        if (PlayerPrefs.HasKey(SAVE_KEY_MONEY))
+        {
+            _currentMoney = PlayerPrefs.GetInt(SAVE_KEY_MONEY);
+        }
+    }
+
+    // Полезно для тестов: Удалить сохранение
+    [ContextMenu("Delete Save File")]
+    public void DeleteSave()
+    {
+        PlayerPrefs.DeleteAll();
+        Debug.Log("СОХРАНЕНИЯ УДАЛЕНЫ!");
     }
 }

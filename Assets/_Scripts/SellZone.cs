@@ -1,19 +1,18 @@
 using UnityEngine;
-using DG.Tweening;
+using DG.Tweening; // Важно
 using System.Collections;
 
 public class SellZone : MonoBehaviour
 {
     [Header("Настройки")]
-    public Transform sellPoint; // Точка, куда летят предметы при продаже (центр зоны)
-    public int pricePerItem = 5; // Цена за 1 мусор
-    public float sellSpeed = 0.1f; // Как быстро продаются предметы (интервал)
+    public Transform sellPoint;
+    public int pricePerItem = 5;
+    public float sellSpeed = 0.1f;
 
     private Coroutine _sellCoroutine;
 
     private void OnTriggerEnter(Collider other)
     {
-        // Проверяем, что зашел Игрок и у него есть скрипт Collector
         if (other.TryGetComponent(out Collector collector))
         {
             if (_sellCoroutine != null) StopCoroutine(_sellCoroutine);
@@ -32,27 +31,29 @@ public class SellZone : MonoBehaviour
 
     IEnumerator SellRoutine(Collector collector)
     {
-        // Пока у игрока есть предметы
         while (collector.HasItems)
         {
-            // 1. Забираем предмет у игрока
             Transform item = collector.RemoveLastItem();
 
             if (item != null)
             {
-                // 2. Отвязываем от игрока
+                // 1. ОТМЕНЯЕМ все прошлые анимации (полет в рюкзак)
+                // Это уберет ошибку "Target is missing"
+                item.DOKill();
+
                 item.SetParent(null);
 
-                // 3. Анимация полета в точку продажи
+                // 2. Запускаем полет в кассу
                 item.DOMove(sellPoint.position, 0.3f).OnComplete(() =>
                 {
-                    // Когда долетел:
-                    MoneyManager.Instance.AddMoney(pricePerItem); // Даем деньги
-                    Destroy(item.gameObject); // Уничтожаем объект
+                    // 3. Снова DOKill перед уничтожением (на всякий случай)
+                    item.DOKill();
+
+                    MoneyManager.Instance.AddMoney(pricePerItem);
+                    Destroy(item.gameObject);
                 });
             }
 
-            // Ждем перед следующей продажей
             yield return new WaitForSeconds(sellSpeed);
         }
     }
