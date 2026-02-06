@@ -4,21 +4,44 @@ using System.Collections.Generic;
 
 public class Collector : MonoBehaviour
 {
-    [Header("Настройки")]
+    [Header("Настройки сбора")]
     public Transform backpackPoint;
     public float stackHeight = 0.3f;
     public float collectDuration = 0.5f;
 
-    [Header("Размер в рюкзаке")]
-    public float itemScaleInBackpack = 0.4f; // <--- НОВАЯ НАСТРОЙКА (поставь 0.4 или 0.5)
+    [Header("Настройки Рюкзака")]
+    public float itemScaleInBackpack = 0.4f;
+
+    // <--- НОВОЕ: Лимит вместимости
+    public int maxCapacity = 10; // Сколько влазит по умолчанию
+    private int _currentCapacity; // Реальная вместимость сейчас
 
     private List<Transform> _collectedTrash = new List<Transform>();
     public bool HasItems => _collectedTrash.Count > 0;
+
+    void Start()
+    {
+        // При старте устанавливаем лимит
+        _currentCapacity = maxCapacity;
+    }
+
+    // <--- НОВЫЙ МЕТОД: Вызывается из магазина для расширения рюкзака
+    public void SetCapacity(int newCapacity)
+    {
+        _currentCapacity = newCapacity;
+    }
 
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Trash"))
         {
+            // <--- НОВОЕ: Проверка на переполнение
+            // Если мусора уже столько же или больше, чем лимит - не собираем
+            if (_collectedTrash.Count >= _currentCapacity)
+            {
+                return;
+            }
+
             CollectItem(collision.transform);
         }
     }
@@ -29,7 +52,6 @@ public class Collector : MonoBehaviour
         Destroy(trashItem.GetComponent<Collider>());
         trashItem.SetParent(transform);
 
-        // ИСПРАВЛЕНИЕ: Используем настройку из инспектора, а не единицу
         trashItem.localScale = Vector3.one * itemScaleInBackpack;
 
         Vector3 targetPosition = backpackPoint.localPosition + new Vector3(0, _collectedTrash.Count * stackHeight, 0);
